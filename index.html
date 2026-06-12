@@ -1,21 +1,17 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Video Annotator Suite</title>
-<style>
-:root{--bg:#111114;--panel:#18191e;--ink:#f6f4ef;--muted:#b9c0c8;--line:#343844;--a:#ffb057;--b:#64d8cb;--c:#8da7ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Tahoma,system-ui,sans-serif;background:radial-gradient(circle at 18% 12%,rgba(255,176,87,.22),transparent 28%),radial-gradient(circle at 84% 18%,rgba(100,216,203,.18),transparent 32%),linear-gradient(145deg,#111114,#171a21 62%,#15120f);color:var(--ink)}main{width:min(1120px,calc(100vw - 32px));margin:auto;padding:48px 0}.kicker{color:var(--a);font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:.12em}h1{font-size:clamp(38px,7vw,82px);line-height:.92;margin:0;letter-spacing:0}.lede{font-size:20px;line-height:1.55;color:#ebe7df;max-width:800px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0}.btn{border:1px solid var(--line);border-radius:8px;padding:12px 16px;color:var(--ink);background:#20232b;text-decoration:none;font-weight:800}.btn.primary{background:var(--a);color:#211306}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card,.panel{border:1px solid var(--line);border-radius:8px;background:rgba(24,25,30,.86);padding:20px}.card h2,.panel h2{margin:0 0 10px;font-size:18px}.card p,.panel p{color:var(--muted);line-height:1.55}.rail{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.pill{border:1px solid var(--line);border-radius:8px;padding:12px;color:#dbe7e6;background:#11151a}pre{white-space:pre-wrap;background:#0d0e12;border:1px solid var(--line);border-radius:8px;padding:16px;color:#d6fff9;overflow:auto}@media(max-width:760px){main{padding:28px 0}.grid,.rail{grid-template-columns:1fr}.lede{font-size:17px}}
-</style>
-</head>
-<body>
-<main>
-<p class="kicker">DaCameraGirl / AI-Video-Annotator</p>
-<h1>AI Video Annotator Suite</h1>
-<p class="lede">A zero-cloud safety and operations interface for local video analysis, PPE checks, restricted-zone monitoring, heatmaps, path tracking, and human-in-the-loop review.</p>
-<div class="actions"><a class="btn primary" href="https://github.com/DaCameraGirl/AI-Video-Annotator">Open source</a><a class="btn" href="https://github.com/DaCameraGirl/AI-Video-Annotator/blob/main/AI%20Video%20Annotator%20Suite.jsx">View app file</a></div>
-<section class="grid"><article class="card"><h2>Local Inference</h2><p>Designed around browser-side TensorFlow.js processing so sensitive video does not need to leave the device.</p></article><article class="card"><h2>Safety Review</h2><p>Targets PPE visibility, restricted-zone intrusion, and alert workflows for operational compliance review.</p></article><article class="card"><h2>Operations Metrics</h2><p>Supports heatmaps, dwell time, paths, manual track cleanup, and observability-minded event reporting.</p></article></section>
-<section class="panel"><h2>Build Notes</h2><div class="rail"><div class="pill">React + TypeScript frontend</div><div class="pill">TensorFlow.js local ML</div><div class="pill">Supabase persistence</div><div class="pill">OpenTelemetry diagnostics</div></div></section>
-</main>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/AI-Video-Annotator/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Zero-cloud warehouse video analysis: on-device object detection, virtual-fence zones, activity heatmaps and dwell-time analytics. Nothing leaves your browser."
+    />
+    <title>AI Video Annotator Suite</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
