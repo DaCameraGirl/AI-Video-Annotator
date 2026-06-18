@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for the Suite
+about: Suggest an idea for the Hydra evaluator
 title: '[Feature] '
 labels: enhancement
 ---

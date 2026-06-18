@@ -1,370 +1,465 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ObjectDetection } from '@tensorflow-models/coco-ssd'
+import { useMemo, useState } from 'react'
+import type { ChangeEvent, DragEvent } from 'react'
 import {
-  Upload,
-  Download,
-  FileJson,
-  Trash2,
-  Code2,
-  ShieldCheck,
-  Boxes,
-  Heart,
+  Clipboard,
+  Copy,
+  Eraser,
+  FileText,
+  ImagePlus,
+  ListChecks,
+  PanelTopOpen,
+  Sparkles,
 } from 'lucide-react'
-import type {
-  AnalysisSnapshot,
-  BBox,
-  ModelStatus,
-  Settings,
-  Zone,
-  ZoneTypeKey,
-} from './types'
-import { DEFAULT_SETTINGS, ZONE_TYPES } from './types'
-import { loadModel } from './ml/loadModel'
-import {
-  buildJsonReport,
-  buildTextReport,
-  downloadFile,
-  type ReportInput,
-} from './lib/exporter'
-import {
-  deleteProject,
-  listProjects,
-  saveProject,
-  type ProjectRecord,
-} from './lib/db'
-import VideoPlayer from './components/VideoPlayer'
-import SettingsPanel from './components/SettingsPanel'
-import ZoneEditor from './components/ZoneEditor'
-import Heatmap from './components/Heatmap'
-import MetricsDashboard from './components/MetricsDashboard'
-import Timeline from './components/Timeline'
-import CaptionPanel from './components/CaptionPanel'
+
+type ImageSlotKey = 'input' | 'a' | 'b'
+type RatingKey =
+  | 'Overall Preference'
+  | 'Instruction Following'
+  | 'Correctness'
+  | 'Visual Quality'
+  | 'AI-Generated Appearance / Naturalness'
+
+interface ImageSlot {
+  label: string
+  url: string
+}
+
+const ratingKeys: RatingKey[] = [
+  'Overall Preference',
+  'Instruction Following',
+  'Correctness',
+  'Visual Quality',
+  'AI-Generated Appearance / Naturalness',
+]
+
+const ratingOptions = [
+  'Response A is much better',
+  'Response A is slightly better',
+  'Tie / About the same',
+  'Response B is slightly better',
+  'Response B is much better',
+]
+
+const starterImages: Record<ImageSlotKey, ImageSlot> = {
+  input: { label: 'Input', url: '' },
+  a: { label: 'Response A', url: '' },
+  b: { label: 'Response B', url: '' },
+}
+
+const starterRatings = Object.fromEntries(ratingKeys.map((key) => [key, ''])) as Record<
+  RatingKey,
+  string
+>
+
+const defectChips = [
+  'changes the whole scene too much',
+  'does not preserve the original subject',
+  'adds extra objects that were not asked for',
+  'misses one of the requested changes',
+  'keeps the original layout closer',
+  'looks less natural around the edit',
+  'changes the camera angle or crop too much',
+  'has stronger visual quality but is less faithful',
+]
 
 export default function App() {
-  const [model, setModel] = useState<ObjectDetection | null>(null)
-  const [modelStatus, setModelStatus] = useState<ModelStatus>('idle')
-  const [modelDetail, setModelDetail] = useState('')
-  const [videoUrl, setVideoUrl] = useState('')
-  const [fileName, setFileName] = useState('')
-  const [duration, setDuration] = useState(0)
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
-  const [zones, setZones] = useState<Zone[]>([])
-  const [drawMode, setDrawMode] = useState(false)
-  const [pendingType, setPendingType] = useState<ZoneTypeKey>('restricted')
-  const [resetKey, setResetKey] = useState(0)
-  const [snap, setSnap] = useState<AnalysisSnapshot | null>(null)
-  const [projects, setProjects] = useState<ProjectRecord[]>([])
-  const zoneId = useRef(1)
-  const prevUrl = useRef('')
+  const [taskText, setTaskText] = useState('')
+  const [prompt, setPrompt] = useState('')
+  const [images, setImages] = useState<Record<ImageSlotKey, ImageSlot>>(starterImages)
+  const [ratings, setRatings] = useState<Record<RatingKey, string>>(starterRatings)
+  const [winnerNotes, setWinnerNotes] = useState('')
+  const [loserNotes, setLoserNotes] = useState('')
+  const [tradeoffNotes, setTradeoffNotes] = useState('')
+  const [justification, setJustification] = useState('')
+  const [activePreview, setActivePreview] = useState<ImageSlot | null>(null)
+  const [copied, setCopied] = useState('')
 
-  const startModel = useCallback(() => {
-    loadModel((status, detail) => {
-      setModelStatus(status)
-      if (detail) setModelDetail(detail)
-    })
-      .then(setModel)
-      .catch(() => {})
-  }, [])
+  const checklist = useMemo(() => makeChecklist(prompt), [prompt])
+  const winner = getWinner(ratings['Overall Preference'])
+  const loser = winner === 'A' ? 'B' : winner === 'B' ? 'A' : ''
 
-  const refreshProjects = useCallback(() => {
-    listProjects().then(setProjects).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    startModel()
-    refreshProjects()
-  }, [startModel, refreshProjects])
-
-  const onPickFile = useCallback((file: File | undefined) => {
-    if (!file || !file.type.startsWith('video/')) return
-    if (prevUrl.current) URL.revokeObjectURL(prevUrl.current)
-    const url = URL.createObjectURL(file)
-    prevUrl.current = url
-    setVideoUrl(url)
-    setFileName(file.name)
-    setSnap(null)
-    setDuration(0)
-    setResetKey((k) => k + 1)
-  }, [])
-
-  const onCreateZone = useCallback(
-    (rect: BBox) => {
-      setZones((prev) => {
-        const count = prev.filter((z) => z.type === pendingType).length + 1
-        return [
-          ...prev,
-          {
-            id: zoneId.current++,
-            type: pendingType,
-            name: `${ZONE_TYPES[pendingType].name} ${count}`,
-            rect,
-          },
-        ]
-      })
-    },
-    [pendingType],
-  )
-
-  const saveLayout = useCallback(async () => {
-    const name = window.prompt('Name this layout', fileName || 'Warehouse layout')
-    if (!name) return
-    await saveProject({ name, createdAt: Date.now(), zones, settings })
-    refreshProjects()
-  }, [fileName, zones, settings, refreshProjects])
-
-  const loadLayout = useCallback(
-    (id: number) => {
-      const p = projects.find((x) => x.id === id)
-      if (!p) return
-      setZones(p.zones)
-      setSettings(p.settings)
-      zoneId.current = p.zones.reduce((m, z) => Math.max(m, z.id), 0) + 1
-    },
-    [projects],
-  )
-
-  const removeLayout = useCallback(
-    async (id: number) => {
-      await deleteProject(id)
-      refreshProjects()
-    },
-    [refreshProjects],
-  )
-
-  const buildReport = useCallback((): ReportInput | null => {
-    if (!snap) return null
-    return {
-      fileName,
-      durationSec: duration,
-      modelInfo: modelDetail || 'COCO-SSD lite_mobilenet_v2',
-      settings,
-      metrics: snap.metrics,
-      tracks: snap.tracks,
-      events: snap.events,
-      zones,
-    }
-  }, [snap, fileName, duration, modelDetail, settings, zones])
-
-  const exportText = () => {
-    const r = buildReport()
-    if (r) downloadFile(`warehouse_analysis_${stamp()}.txt`, buildTextReport(r), 'text/plain')
+  function setSlotUrl(slot: ImageSlotKey, url: string) {
+    setImages((current) => ({
+      ...current,
+      [slot]: { ...current[slot], url },
+    }))
   }
-  const exportJson = () => {
-    const r = buildReport()
-    if (r) downloadFile(`warehouse_analysis_${stamp()}.json`, buildJsonReport(r), 'application/json')
+
+  function clearSlot(slot: ImageSlotKey) {
+    setSlotUrl(slot, '')
+  }
+
+  function onDrop(slot: ImageSlotKey, event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault()
+    const file = event.dataTransfer.files[0]
+    const url = event.dataTransfer.getData('text/uri-list') || event.dataTransfer.getData('text/plain')
+    if (file?.type.startsWith('image/')) {
+      setSlotUrl(slot, URL.createObjectURL(file))
+      return
+    }
+    if (url) setSlotUrl(slot, url.trim())
+  }
+
+  function onPickFile(slot: ImageSlotKey, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (file?.type.startsWith('image/')) {
+      setSlotUrl(slot, URL.createObjectURL(file))
+    }
+  }
+
+  function parseTask() {
+    const text = taskText.trim()
+    if (!text) return
+
+    const promptMatch = text.match(
+      /Prompt\s*([\s\S]*?)(?:Input Image|Input\s|Response A|response a|reesponse a|respomse a|response b|$)/i,
+    )
+    setPrompt(cleanTaskPrompt(promptMatch?.[1] || text))
+
+    const urls = [...text.matchAll(/https:\/\/storage\.googleapis\.com\/[^\s,]+/g)].map(
+      (match) => match[0],
+    )
+
+    if (urls[0]) setSlotUrl('input', urls[0])
+    if (urls[1]) setSlotUrl('a', urls[1])
+    if (urls[2]) setSlotUrl('b', urls[2])
+  }
+
+  function setRating(key: RatingKey, value: string) {
+    setRatings((current) => ({ ...current, [key]: value }))
+  }
+
+  function draftJustification() {
+    const pickedWinner = getWinner(ratings['Overall Preference'])
+    if (!pickedWinner) {
+      setJustification('Pick an overall preference first.')
+      return
+    }
+
+    const pickedLoser = pickedWinner === 'A' ? 'B' : 'A'
+    const strength = ratings['Overall Preference'].includes('much') ? 'much better' : 'better'
+    const lines = [
+      `Response ${pickedWinner} is ${strength} than Response ${pickedLoser}.`,
+    ]
+
+    if (winnerNotes.trim()) {
+      lines.push(`Response ${pickedWinner} ${sentence(winnerNotes)}`)
+    } else {
+      lines.push(
+        `Response ${pickedWinner} follows the requested changes more closely while staying more faithful to the input image.`,
+      )
+    }
+
+    if (loserNotes.trim()) {
+      lines.push(`Response ${pickedLoser} ${sentence(loserNotes)}`)
+    }
+
+    if (tradeoffNotes.trim()) {
+      lines.push(sentence(tradeoffNotes))
+    }
+
+    setJustification(removeEmDashes(lines.join(' ')))
+  }
+
+  function clearAll() {
+    setTaskText('')
+    setPrompt('')
+    setImages(starterImages)
+    setRatings(starterRatings)
+    setWinnerNotes('')
+    setLoserNotes('')
+    setTradeoffNotes('')
+    setJustification('')
+    setCopied('')
+  }
+
+  async function copyText(value: string, label: string) {
+    if (!value.trim()) return
+    await navigator.clipboard.writeText(value)
+    setCopied(label)
+    window.setTimeout(() => setCopied(''), 1800)
+  }
+
+  function copyRatings() {
+    const ratingText = ratingKeys
+      .map((key) => `${key}: ${ratings[key] || 'Not selected'}`)
+      .join('\n')
+    copyText(ratingText, 'ratings')
+  }
+
+  function addChip(note: string) {
+    setLoserNotes((current) => (current.trim() ? `${current}, ${note}` : note))
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0d12] text-slate-100">
-      <Header />
+    <div className="min-h-screen bg-[#f7f2e9] text-[#171412]">
+      <header className="border-b border-[#ddd1bf] bg-[#fffaf2]/90 backdrop-blur">
+        <div className="mx-auto flex max-w-[1500px] items-center gap-3 px-4 py-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7b1f2f] text-white">
+            <ListChecks size={21} />
+          </div>
+          <div>
+            <h1 className="text-lg font-black leading-tight">Hydra evaluator</h1>
+            <p className="text-xs font-semibold text-[#6f665d]">Fast image response scoring</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <button className="tool-button" onClick={copyRatings} type="button">
+              <Clipboard size={16} />
+              Copy ratings
+            </button>
+            <button className="tool-button danger" onClick={clearAll} type="button">
+              <Eraser size={16} />
+              Clear
+            </button>
+          </div>
+        </div>
+      </header>
 
-      <main className="mx-auto max-w-[1440px] px-4 pb-20 pt-6">
-        {!videoUrl ? (
-          <UploadScreen onPick={onPickFile} status={modelStatus} detail={modelDetail} />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
-              <div className="space-y-4 xl:col-span-3">
-                <VideoPlayer
-                  videoUrl={videoUrl}
-                  model={model}
-                  settings={settings}
-                  zones={zones}
-                  drawMode={drawMode}
-                  resetKey={resetKey}
-                  onCreateZone={onCreateZone}
-                  onSnapshot={setSnap}
-                  onDuration={setDuration}
-                />
+      <main className="mx-auto grid max-w-[1500px] grid-cols-1 gap-4 px-4 py-4 xl:grid-cols-[390px_1fr]">
+        <section className="surface space-y-3 p-4">
+          <div className="section-heading">
+            <FileText size={18} />
+            <h2>Task text</h2>
+          </div>
+          <textarea
+            className="input-area min-h-36"
+            placeholder="Paste the full Hydra task here."
+            value={taskText}
+            onChange={(event) => setTaskText(event.target.value)}
+          />
+          <button className="primary-button w-full" onClick={parseTask} type="button">
+            <PanelTopOpen size={18} />
+            Pull prompt and links
+          </button>
 
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-700/70 bg-slate-900/40 p-3">
-                  <span className="mr-1 truncate text-xs text-slate-400">{fileName}</span>
-                  <button
-                    onClick={exportText}
-                    disabled={!snap}
-                    className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold hover:bg-sky-500 disabled:opacity-40"
-                  >
-                    <Download size={14} /> Report (.txt)
-                  </button>
-                  <button
-                    onClick={exportJson}
-                    disabled={!snap}
-                    className="flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-sm font-medium hover:bg-slate-600 disabled:opacity-40"
-                  >
-                    <FileJson size={14} /> Data (.json)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setResetKey((k) => k + 1)
-                      setSnap(null)
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:border-slate-400"
-                  >
-                    <Trash2 size={14} /> Reset analysis
-                  </button>
-                  <label className="ml-auto cursor-pointer rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:border-slate-400">
-                    Change video
-                    <input
-                      type="file"
-                      accept="video/*"
-                      className="hidden"
-                      onChange={(e) => onPickFile(e.target.files?.[0])}
-                    />
-                  </label>
+          <label className="block space-y-2">
+            <span className="label-text">Prompt</span>
+            <textarea
+              className="input-area min-h-28"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder="Prompt goes here."
+            />
+          </label>
+
+          <div className="rounded-lg border border-[#e2d6c6] bg-[#fffaf2] p-3">
+            <div className="mb-2 flex items-center gap-2 text-sm font-black">
+              <Sparkles size={16} />
+              Checklist
+            </div>
+            <ul className="space-y-2 text-sm text-[#5f574f]">
+              {checklist.length ? (
+                checklist.map((item) => <li key={item}>{item}</li>)
+              ) : (
+                <li>Add a prompt to split the requested edits.</li>
+              )}
+            </ul>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {(['input', 'a', 'b'] as ImageSlotKey[]).map((slot) => (
+            <ImageCard
+              key={slot}
+              image={images[slot]}
+              slot={slot}
+              onDrop={onDrop}
+              onPickFile={onPickFile}
+              onUrl={setSlotUrl}
+              onClear={clearSlot}
+              onPreview={setActivePreview}
+            />
+          ))}
+        </section>
+
+        <section className="surface p-4 xl:col-span-2">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="section-heading">
+              <ListChecks size={18} />
+              <h2>Ratings</h2>
+            </div>
+            {copied && <span className="rounded-full bg-[#0d5c63]/10 px-3 py-1 text-xs font-bold text-[#0d5c63]">Copied {copied}</span>}
+          </div>
+
+          <div className="space-y-3">
+            {ratingKeys.map((key) => (
+              <div key={key} className="rating-row">
+                <div className="text-sm font-black">{key}</div>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
+                  {ratingOptions.map((option) => (
+                    <button
+                      key={option}
+                      className={ratings[key] === option ? 'rating-button active' : 'rating-button'}
+                      onClick={() => setRating(key, option)}
+                      type="button"
+                    >
+                      {option}
+                    </button>
+                  ))}
                 </div>
-
-                <MetricsDashboard snap={snap} />
               </div>
+            ))}
+          </div>
+        </section>
 
-              <div className="space-y-4 xl:col-span-1">
-                <SettingsPanel
-                  settings={settings}
-                  modelStatus={modelStatus}
-                  modelDetail={modelDetail}
-                  onChange={(patch) => setSettings((s) => ({ ...s, ...patch }))}
-                  onRetry={startModel}
-                />
-                <ZoneEditor
-                  zones={zones}
-                  events={snap?.events ?? []}
-                  drawMode={drawMode}
-                  pendingType={pendingType}
-                  hasVideo={!!videoUrl}
-                  savedProjects={projects}
-                  onPendingType={setPendingType}
-                  onToggleDraw={() => setDrawMode((d) => !d)}
-                  onDelete={(id) => setZones((z) => z.filter((x) => x.id !== id))}
-                  onClear={() => setZones([])}
-                  onSaveLayout={saveLayout}
-                  onLoadLayout={loadLayout}
-                  onDeleteLayout={removeLayout}
-                />
-                <Heatmap
-                  enabled={settings.showHeatmap}
-                  onToggle={() => setSettings((s) => ({ ...s, showHeatmap: !s.showHeatmap }))}
-                />
-              </div>
+        <section className="surface p-4 xl:col-span-2">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="section-heading">
+              <Sparkles size={18} />
+              <h2>Justification</h2>
             </div>
+            <div className="flex flex-wrap gap-2">
+              <button className="primary-button" onClick={draftJustification} type="button">
+                Draft
+              </button>
+              <button
+                className="tool-button"
+                onClick={() => copyText(justification, 'justification')}
+                type="button"
+              >
+                <Copy size={16} />
+                Copy
+              </button>
+            </div>
+          </div>
 
-            <div className="mt-6 space-y-6">
-              <Timeline snap={snap} />
-              <CaptionPanel snap={snap} />
-            </div>
-          </>
-        )}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            <label className="space-y-2">
+              <span className="label-text">What Response {winner || 'A/B'} does right</span>
+              <textarea
+                className="input-area min-h-28"
+                value={winnerNotes}
+                onChange={(event) => setWinnerNotes(event.target.value)}
+                placeholder="keeps the original subject and makes the requested edits"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="label-text">What Response {loser || 'A/B'} gets wrong</span>
+              <textarea
+                className="input-area min-h-28"
+                value={loserNotes}
+                onChange={(event) => setLoserNotes(event.target.value)}
+                placeholder="changes the whole scene or misses a requested detail"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="label-text">Tradeoff or shared issue</span>
+              <textarea
+                className="input-area min-h-28"
+                value={tradeoffNotes}
+                onChange={(event) => setTradeoffNotes(event.target.value)}
+                placeholder="both responses have the same issue"
+              />
+            </label>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {defectChips.map((chip) => (
+              <button key={chip} className="chip" onClick={() => addChip(chip)} type="button">
+                {chip}
+              </button>
+            ))}
+          </div>
+
+          <textarea
+            className="input-area mt-4 min-h-28"
+            value={justification}
+            onChange={(event) => setJustification(removeEmDashes(event.target.value))}
+            placeholder="Response A is better than Response B..."
+          />
+        </section>
       </main>
-      <Footer />
+
+      {activePreview && (
+        <button className="preview-backdrop" onClick={() => setActivePreview(null)} type="button">
+          <img src={activePreview.url} alt={`${activePreview.label} expanded`} />
+        </button>
+      )}
     </div>
   )
 }
 
-function Header() {
-  return (
-    <header className="sticky top-0 z-10 border-b border-slate-800 bg-[#0b0d12]/90 backdrop-blur">
-      <div className="mx-auto flex max-w-[1440px] items-center gap-3 px-4 py-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-cyan-400 text-slate-950">
-          <Boxes size={20} />
-        </div>
-        <div>
-          <h1 className="text-base font-bold leading-tight">AI Video Annotator Suite</h1>
-          <p className="text-[11px] text-slate-400">
-            On-device warehouse video analysis
-          </p>
-        </div>
-        <span className="ml-3 hidden items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300 sm:flex">
-          <ShieldCheck size={12} /> 100% local · nothing uploaded
-        </span>
-        <a
-          href="https://github.com/DaCameraGirl/AI-Video-Annotator"
-          target="_blank"
-          rel="noreferrer"
-          className="ml-auto flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500"
-        >
-          <Code2 size={15} /> <span className="hidden sm:inline">Source</span>
-        </a>
-      </div>
-    </header>
-  )
-}
-
-function UploadScreen(props: {
-  onPick: (f: File | undefined) => void
-  status: ModelStatus
-  detail: string
+function ImageCard(props: {
+  image: ImageSlot
+  slot: ImageSlotKey
+  onDrop: (slot: ImageSlotKey, event: DragEvent<HTMLLabelElement>) => void
+  onPickFile: (slot: ImageSlotKey, event: ChangeEvent<HTMLInputElement>) => void
+  onUrl: (slot: ImageSlotKey, url: string) => void
+  onClear: (slot: ImageSlotKey) => void
+  onPreview: (image: ImageSlot) => void
 }) {
   return (
-    <div className="mx-auto max-w-3xl pt-10 text-center">
-      <h2 className="text-3xl font-bold text-slate-100 sm:text-4xl">
-        Turn warehouse footage into structured data
-      </h2>
-      <p className="mx-auto mt-3 max-w-2xl text-slate-400">
-        Upload a clip and the detector runs right here in your browser — bounding
-        boxes, object tracking, virtual-fence zones, dwell times, an activity
-        heatmap, and a report. Your video never leaves your device.
-      </p>
+    <article className="surface overflow-hidden">
+      <header className="flex items-center justify-between border-b border-[#ddd1bf] px-3 py-2">
+        <h2 className="text-sm font-black">{props.image.label}</h2>
+        <button className="mini-button" onClick={() => props.onClear(props.slot)} type="button">
+          Clear
+        </button>
+      </header>
 
       <label
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault()
-          props.onPick(e.dataTransfer.files?.[0])
-        }}
-        className="mt-8 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/40 px-8 py-14 transition hover:border-sky-500 hover:bg-slate-900/70"
+        className="image-drop"
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => props.onDrop(props.slot, event)}
       >
-        <Upload size={40} className="mb-4 text-sky-400" />
-        <span className="text-lg font-semibold">Drop a video here, or click to choose</span>
-        <span className="mt-1 text-sm text-slate-500">MP4, WebM, MOV — anything your browser plays</span>
+        {props.image.url ? (
+          <img
+            src={props.image.url}
+            alt={`${props.image.label} preview`}
+            onDoubleClick={() => props.onPreview(props.image)}
+          />
+        ) : (
+          <span>
+            <ImagePlus size={26} />
+            Drop image
+          </span>
+        )}
         <input
           type="file"
-          accept="video/*"
+          accept="image/*"
           className="hidden"
-          onChange={(e) => props.onPick(e.target.files?.[0])}
+          onChange={(event) => props.onPickFile(props.slot, event)}
         />
       </label>
 
-      <div className="mt-4 text-xs text-slate-500">
-        Detector:{' '}
-        <span className={props.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'}>
-          {props.detail || props.status}
-        </span>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-3 text-left sm:grid-cols-3">
-        <Blurb title="Your terminology">
-          Generic detections are relabeled with your approved warehouse terms —
-          worker, forklift, pallet jack, tall metal shelving.
-        </Blurb>
-        <Blurb title="Honest about AI">
-          Real COCO-SSD detections only. PPE (vests) is a clearly-tagged color
-          estimate, never a faked detection.
-        </Blurb>
-        <Blurb title="All in one">
-          Object detection and the warehouse caption checker, together at last.
-        </Blurb>
-      </div>
-    </div>
+      <input
+        className="url-input"
+        value={props.image.url}
+        onChange={(event) => props.onUrl(props.slot, event.target.value)}
+        placeholder={`${props.image.label} URL`}
+      />
+    </article>
   )
 }
 
-function Blurb({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-      <div className="mb-1 text-sm font-semibold text-sky-300">{title}</div>
-      <p className="text-xs leading-relaxed text-slate-400">{children}</p>
-    </div>
-  )
+function makeChecklist(prompt: string) {
+  if (!prompt.trim()) return []
+
+  return prompt
+    .replace(/\b(?:Then|Finally|Also|And)\b/gi, '.')
+    .replace(/\d+\.\s*/g, '. ')
+    .split(/[.;]/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 12)
+    .slice(0, 8)
 }
 
-function Footer() {
-  return (
-    <footer className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-      <span className="inline-flex items-center gap-1">
-        Built by Angela Hudson · DaCameraGirl <Heart size={11} className="text-pink-400" />
-      </span>
-    </footer>
-  )
+function cleanTaskPrompt(value: string) {
+  return value.replace(/^[:\s]+/, '').trim()
 }
 
-function stamp(): string {
-  return new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+function getWinner(overall: string) {
+  if (overall.includes('Response A')) return 'A'
+  if (overall.includes('Response B')) return 'B'
+  return ''
+}
+
+function sentence(value: string) {
+  const cleaned = removeEmDashes(value).trim().replace(/\s+/g, ' ')
+  if (!cleaned) return ''
+  return /[.!?]$/.test(cleaned) ? cleaned : `${cleaned}.`
+}
+
+function removeEmDashes(value: string) {
+  return value.replace(/[\u2013\u2014]/g, ',')
 }

@@ -1,15 +1,16 @@
-## What & why
+## What and why
 
 <!-- What does this change and why? Link any issue: Closes #123 -->
 
 ## How I tested
 
-<!-- e.g. ran `npm run build`, loaded a clip, drew a zone, checked the export -->
+<!-- e.g. ran `npm run lint`, `npm run typecheck`, `npm run build`, loaded a Hydra task, checked image preview and justification copy. -->
 
 ## Checklist
 
 - [ ] `npm run lint` passes
 - [ ] `npm run typecheck` passes
 - [ ] `npm run build` passes
-- [ ] No secrets, keys, or private video committed
-- [ ] Honest about the AI (no faked detections; estimates clearly tagged)
+- [ ] No secrets, keys, private task data, or paid-work images committed
+- [ ] Hydra justification text stays plain, specific, and free of em dashes
+- [ ] Prompt invariants and original-image preservation are considered separately from visual polish

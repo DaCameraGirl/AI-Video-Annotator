@@ -1,7 +1,8 @@
 {
-  "name": "ai-video-annotator",
+  "name": "hydra-evaluator",
   "private": true,
   "version": "0.0.0",
+  "description": "Local Project Hydra image response evaluator for side-by-side scoring and justification drafting.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,8 +13,6 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
-    "@tensorflow-models/coco-ssd": "^2.2.3",
-    "@tensorflow/tfjs": "^4.22.0",
     "lucide-react": "^1.17.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

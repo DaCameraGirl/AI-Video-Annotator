@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something isn't working
+about: Something is not working
 title: '[Bug] '
 labels: bug
 ---
@@ -15,5 +15,5 @@ labels: bug
 
 **Browser / OS**
 
-**Video details (if relevant)**
-Resolution, length, format — no need to share the file.
+**Task details (if relevant)**
+Prompt type, image source, or rating step. Do not include private paid-work images unless they are safe to share.
