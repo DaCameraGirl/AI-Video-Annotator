@@ -86,6 +86,8 @@ src/
 
 ## Related work
 
+This repo is **only** the warehouse video annotator. Project Hydra image A/B evaluation lives separately in [hydra-evaluator-app](https://github.com/DaCameraGirl/hydra-evaluator-app).
+
 This Suite consolidates earlier warehouse tooling into one home:
 
 - **Warehouse-Annotator** — original caption checker (folded in, archived)
