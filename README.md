@@ -70,7 +70,7 @@ npm run dev
 
 ## Deploy
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds the app
+Pushing to `main` triggers `.github/workflows/deploy-pages.yml`, which builds the app
 and publishes `dist/` to GitHub Pages. The Vite `base` is set to
 `/AI-Video-Annotator/` for the project-page URL.
 
