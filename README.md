@@ -41,7 +41,7 @@
 </p>
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=Pipeline%20at%20a%20glance&fontSize=22&fontColor=f7f2e8" width="720" alt="Pipeline at a glance" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=Pipeline%20at%20a%20glance&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="Pipeline at a glance" /></p>
 
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
@@ -63,7 +63,7 @@ flowchart LR
 ```
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=What%20it%20does&fontSize=22&fontColor=f7f2e8" width="720" alt="What it does" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=What%20it%20does&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="What it does" /></p>
 
 
 - **Live detection + tracking** — COCO-SSD (TensorFlow.js) runs on every frame; a lightweight IoU tracker gives each object a stable id, so you get unique counts, movement trails, and dwell times.
@@ -75,7 +75,7 @@ flowchart LR
 - **Export** — download a human-readable report (`.txt`) and structured data (`.json`).
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=Honest%20about%20the%20AI&fontSize=22&fontColor=f7f2e8" width="720" alt="Honest about the AI" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=Honest%20about%20the%20AI&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="Honest about the AI" /></p>
 
 
 This tool does not fake detections.
@@ -85,7 +85,7 @@ This tool does not fake detections.
 - Gendered guesses are intentionally **not** used (the terminology rules ban them); a detected person is a "worker".
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=Tech%20stack&fontSize=22&fontColor=f7f2e8" width="720" alt="Tech stack" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=Tech%20stack&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="Tech stack" /></p>
 
 
 <p align="center">
@@ -103,7 +103,7 @@ This tool does not fake detections.
 No backend, no database, no API keys.
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=Run%20locally&fontSize=22&fontColor=f7f2e8" width="720" alt="Run locally" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=Run%20locally&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="Run locally" /></p>
 
 
 ```bash
@@ -116,13 +116,13 @@ npm run dev
 - Lint: `npm run lint`
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=Deploy&fontSize=22&fontColor=f7f2e8" width="720" alt="Deploy" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=Deploy&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="Deploy" /></p>
 
 
 Pushing to `main` triggers `.github/workflows/deploy-pages.yml`, which builds the app and publishes `dist/` to GitHub Pages. The Vite `base` is set to `/AI-Video-Annotator/` for the project-page URL.
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=Project%20structure&fontSize=22&fontColor=f7f2e8" width="720" alt="Project structure" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=Project%20structure&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="Project structure" /></p>
 
 
 ```
@@ -134,7 +134,7 @@ src/
 ```
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=Related%20work&fontSize=22&fontColor=f7f2e8" width="720" alt="Related work" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=Related%20work&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="Related work" /></p>
 
 
 This repo is **only** the warehouse video annotator. Project Hydra image A/B evaluation lives separately in [hydra-evaluator-app](https://github.com/DaCameraGirl/hydra-evaluator-app).
@@ -145,7 +145,7 @@ This Suite consolidates earlier warehouse tooling into one home:
 - **Warehouse-Caption-Checker** — terminology QA rules (folded in, archived)
 
 <p align="center"><img src="docs/readme-divider.svg" width="720" alt="" /></p>
-<p align="center"><img src="https://capsule-render.vercel.app/api?type=rect&color=0b1010&height=50&section=header&text=License&fontSize=22&fontColor=f7f2e8" width="720" alt="License" /></p>
+<p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=0:070b14,100:12102a&height=50&section=header&text=License&fontSize=22&fontColor=e6edf3&animation=twinkling" width="720" alt="License" /></p>
 
 
 Copyright © 2026 Angela Hudson. All Rights Reserved. See [LICENSE](LICENSE). Viewing this repository does not grant a license to use the code.
